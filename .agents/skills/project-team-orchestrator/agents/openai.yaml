@@ -1,0 +1,4 @@
+interface:
+  display_name: "项目团队编排"
+  short_description: "运行长期分工、单写入、独立验收、模型速度与任务治理"
+  default_prompt: "使用 $project-team-orchestrator 规划或运行这个项目团队；保持唯一总控和长期角色，默认 Standard，并分别审计模型、推理强度、速度与临时任务生命周期。"

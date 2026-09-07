@@ -1,0 +1,220 @@
+schema_version: 2
+policy_id: "{{PROJECT_SLUG}}-model-routing"
+policy_owner: "{{PROJECT_NAME}}产品经理-项目总控"
+reviewed_at: "{{ROUTING_POLICY_REVIEW_DATE}}"
+application_mode: "per_dispatch"
+
+# 服务速度与 model/reasoning 完全独立。Standard 是默认；不得把它映射成 medium reasoning。
+service_tier_policy:
+  default_speed: "standard"
+  allowed_speeds:
+    - "standard"
+    - "fast"
+  fast_authorization: "explicit_user_or_durable_project_policy"
+  override_scope: "next_dispatch_only"
+  on_unavailable_control: "manual_action_required"
+  reasoning_independent: true
+
+# 从低到高的能力层级。Skill 只按此顺序比较，不从模型名猜测能力。
+tier_order:
+  - "L1"
+  - "L2"
+  - "L3"
+  - "L3_CRITICAL"
+
+# 这是可替换的起始映射，不是永恒的模型目录。每次派单都要校验当前 Host 可用性。
+tiers:
+  L1:
+    model: "gpt-5.6-luna"
+    reasoning: "low"
+    purpose: "机械、边界清楚的证据采集"
+  L2:
+    model: "gpt-5.6-terra"
+    reasoning: "high"
+    purpose: "常规工程判断、实现与测试"
+  L3:
+    model: "gpt-5.6-sol"
+    reasoning: "high"
+    purpose: "复杂推理、契约、架构、独立 QA"
+  L3_CRITICAL:
+    model: "gpt-5.6-sol"
+    reasoning: "max"
+    purpose: "高严重度内部建议，或已获用户明确授权后的关键派单"
+
+# 任务类别生成候选层级；风险 trigger 才形成不可突破的下限。
+task_classes:
+  mechanical_evidence:
+    candidate_tier: "L1"
+  standard_delivery:
+    candidate_tier: "L2"
+  complex_analysis:
+    candidate_tier: "L3"
+  critical_judgment:
+    candidate_tier: "L3_CRITICAL"
+
+phase_floors:
+  planning:
+    minimum_tier: "L2"
+  evidence_collection:
+    minimum_tier: "L1"
+  implementation:
+    minimum_tier: "L2"
+  architecture_review:
+    minimum_tier: "L3"
+  independent_qa:
+    minimum_tier: "L3"
+  final_release_or_risk_recommendation:
+    minimum_tier: "L3_CRITICAL"
+
+triggers:
+  public_contract_or_compatibility:
+    minimum_tier: "L3"
+    sticky_until: "decision_or_handoff_recorded"
+  security_or_privacy_boundary:
+    minimum_tier: "L3"
+    sticky_until: "risk_closed_or_accepted"
+  concurrency_shared_state_or_atomicity:
+    minimum_tier: "L3"
+    sticky_until: "targeted_verification_passed"
+  data_loss_or_irreversible_migration:
+    minimum_tier: "L3"
+    sticky_until: "rollback_and_verification_recorded"
+  p0_or_p1_candidate:
+    minimum_tier: "L3"
+    sticky_until: "severity_decided"
+  conflicting_evidence:
+    minimum_tier: "L3"
+    sticky_until: "conflict_resolved"
+  suspicious_green_tests:
+    minimum_tier: "L3"
+    sticky_until: "behavior_explained_and_probed"
+  final_architecture_security_or_compatibility_recommendation:
+    minimum_tier: "L3_CRITICAL"
+    sticky_until: "decision_recorded"
+  final_release_risk_or_severity_recommendation:
+    minimum_tier: "L3_CRITICAL"
+    sticky_until: "decision_recorded"
+  irreversible_action_recommendation:
+    minimum_tier: "L3_CRITICAL"
+    sticky_until: "decision_recorded"
+
+# 这些信号单独出现时不触发升级。
+non_escalation_signals:
+  - "many_files"
+  - "long_diff"
+  - "many_tests"
+  - "long_running_task"
+  - "many_commands"
+  - "read_entire_repository"
+  - "user_requested_care"
+
+# 仅限团队内部最终建议/裁决；不能承载用户保留决定。
+retained_judgments:
+  architecture_technical_recommendation:
+    minimum_tier: "L3_CRITICAL"
+    authorized_profiles:
+      - "architecture_owner"
+  qa_severity_final:
+    minimum_tier: "L3"
+    authorized_profiles:
+      - "independent_qa"
+  release_go_no_go_recommendation:
+    minimum_tier: "L3_CRITICAL"
+    authorized_profiles:
+      - "independent_qa"
+      - "product_manager"
+
+# 这些最终决定只属于用户。recommendation_profiles 可以准备建议或记录用户已批准的决定，
+# 但即使模型达到 critical，也不能替代 requires_explicit_user_authorization。
+user_reserved_decisions:
+  release_approval:
+    minimum_tier: "L3_CRITICAL"
+    requires_explicit_user_authorization: true
+    recommendation_profiles:
+      - "independent_qa"
+      - "product_manager"
+  material_risk_acceptance:
+    minimum_tier: "L3_CRITICAL"
+    requires_explicit_user_authorization: true
+    recommendation_profiles:
+      - "architecture_owner"
+      - "independent_qa"
+      - "product_manager"
+  irreversible_architecture_or_data_decision:
+    minimum_tier: "L3_CRITICAL"
+    requires_explicit_user_authorization: true
+    recommendation_profiles:
+      - "architecture_owner"
+      - "product_manager"
+  external_or_destructive_action_authorization:
+    minimum_tier: "L3_CRITICAL"
+    requires_explicit_user_authorization: true
+    recommendation_profiles:
+      - "product_manager"
+
+profiles:
+  product_manager:
+    default_tier: "L3"
+    minimum_tier: "L1"
+    maximum_tier: "L3_CRITICAL"
+    final_judgment_allowed: true
+  architecture_owner:
+    default_tier: "L3"
+    minimum_tier: "L2"
+    maximum_tier: "L3_CRITICAL"
+    final_judgment_allowed: true
+  implementation_owner:
+    default_tier: "L2"
+    minimum_tier: "L1"
+    maximum_tier: "L3_CRITICAL"
+    final_judgment_allowed: true
+  independent_qa:
+    default_tier: "L3"
+    minimum_tier: "L2"
+    maximum_tier: "L3_CRITICAL"
+    final_judgment_allowed: true
+  evidence_agent:
+    default_tier: "L1"
+    minimum_tier: "L1"
+    maximum_tier: "L2"
+    final_judgment_allowed: false
+  documentation_maintainer:
+    default_tier: "L1"
+    minimum_tier: "L1"
+    maximum_tier: "L3"
+    final_judgment_allowed: false
+
+# 每个长期角色只保留一条生效绑定。项目可自由增删 Profile 与角色。
+role_assignments:
+  - role: "{{PROJECT_NAME}}产品经理-项目总控"
+    profile: "product_manager"
+  - role: "技术负责人-架构与边界"
+    profile: "architecture_owner"
+  - role: "工程师-核心产品实现"
+    profile: "implementation_owner"
+  - role: "QA工程师-质量与安全"
+    profile: "independent_qa"
+
+downgrade_policy:
+  minimum_stable_dispatches: 1
+  require_all:
+    - "no_active_trigger_above_target"
+    - "not_in_locked_judgment_phase"
+    - "no_unresolved_p0_p1_or_evidence_conflict"
+    - "supporting_evidence_or_handoff_recorded"
+  applies_to: "next_dispatch_only"
+
+runtime_validation:
+  validate_model_and_reasoning_at_dispatch: true
+  validate_service_tier_at_dispatch: true
+  on_unknown_schema_tier_profile_or_trigger: "stop_and_report"
+  on_unsupported_model_or_reasoning: "stop_and_report"
+  on_unsupported_or_unsettable_service_tier: "manual_action_required"
+  allow_silent_fallback: false
+  declared_fallbacks: {}
+
+recording:
+  registry_records_requested_not_observed_model: true
+  registry_records_requested_and_application_status_for_speed: true
+  clear_work_package_override_on_close: true
+  record_user_authorization_evidence: true
