@@ -34,6 +34,13 @@ reusable-project-team-template/
 │               ├── routing-protocol.md
 │               ├── runtime-controls-and-task-lifecycle.md
 │               └── acceptance-scenarios.md
+├── index.html
+├── assets/
+│   ├── app.js
+│   └── styles.css
+├── Dockerfile
+├── compose.yml
+├── nginx.conf
 └── docs/
     ├── PRODUCT_MANAGER_CHARTER.template.md
     ├── ORG_CHART.template.md
@@ -41,6 +48,14 @@ reusable-project-team-template/
     ├── DECISION_LOG.template.md
     └── DEVELOPMENT_WORKFLOW.template.md
 ```
+
+## 版本与镜像关系
+
+- 根目录模板是供用户直接查看、复制和手动初始化项目的最新版模板。
+- `.agents/skills/project-team-orchestrator/` 是 Codex 可引用的统一 Skill；不要再维护第二个旧版 Skill。
+- Skill 内的 `assets/project-template/` 是为了让 Skill 能独立执行初始化而保留的发布镜像，应与根目录同名模板保持一致。
+- 仓库不再保留旧的 `Codex 多 Chat 产品研发治理模板/` 子目录；文档站直接读取根目录模板和内嵌 Skill。
+- 本机 `/Users/.../.codex/skills/project-team-orchestrator/` 属于安装副本，不是仓库目录。发布新版本后可用仓库内 Skill 同步更新本机安装副本。
 
 ## 使用方法
 

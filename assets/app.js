@@ -1,13 +1,15 @@
 "use strict";
 
-const ROOT = "./Codex 多 Chat 产品研发治理模板/";
+const ROOT = "./";
+const SKILL_ROOT = `${ROOT}.agents/skills/project-team-orchestrator/`;
 
 const groups = [
   {
     name: "入门",
     documents: [
       { id: "readme", title: "使用说明", path: `${ROOT}README.md` },
-      { id: "agents", title: "项目指令模板", path: `${ROOT}AGENTS.template.md` }
+      { id: "agents", title: "项目指令模板", path: `${ROOT}AGENTS.template.md` },
+      { id: "bootstrap", title: "项目初始化指南", path: `${SKILL_ROOT}assets/project-template/BOOTSTRAP.md` }
     ]
   },
   {
@@ -21,11 +23,23 @@ const groups = [
     ]
   },
   {
-    name: "项目治理",
+    name: "模型与运行时",
+    documents: [
+      { id: "routing-policy", title: "模型路由策略", path: `${ROOT}MODEL_ROUTING_POLICY.template.yaml`, format: "yaml" },
+      { id: "skill", title: "项目团队编排 Skill", path: `${SKILL_ROOT}SKILL.md` },
+      { id: "policy-schema", title: "策略 Schema", path: `${SKILL_ROOT}references/policy-schema.md` },
+      { id: "routing-protocol", title: "派单与路由协议", path: `${SKILL_ROOT}references/routing-protocol.md` },
+      { id: "runtime-controls", title: "运行时与任务生命周期", path: `${SKILL_ROOT}references/runtime-controls-and-task-lifecycle.md` }
+    ]
+  },
+  {
+    name: "项目治理与验收",
     documents: [
       { id: "product-context", title: "产品与团队上下文", path: `${ROOT}docs/PRODUCT_CONTEXT.template.md` },
       { id: "decisions", title: "决策日志", path: `${ROOT}docs/DECISION_LOG.template.md` },
-      { id: "workflow", title: "研发与备份流程", path: `${ROOT}docs/DEVELOPMENT_WORKFLOW.template.md` }
+      { id: "workflow", title: "研发与备份流程", path: `${ROOT}docs/DEVELOPMENT_WORKFLOW.template.md` },
+      { id: "team-model", title: "团队运行模型", path: `${SKILL_ROOT}references/team-operating-model.md` },
+      { id: "acceptance", title: "验收场景", path: `${SKILL_ROOT}references/acceptance-scenarios.md` }
     ]
   }
 ];
@@ -198,8 +212,12 @@ async function openDocument(id, updateHistory = true) {
   try {
     const response = await fetch(doc.path, { headers: { Accept: "text/markdown, text/plain" } });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const markdown = await response.text();
-    article.innerHTML = `<div class="document__meta"><span>Markdown 模板</span><a href="${encodeURI(doc.path)}" download>下载原文件</a></div>${markdownToHtml(markdown)}`;
+    const source = await response.text();
+    const rendered = doc.format === "yaml"
+      ? `<pre><div class="code-label">yaml</div><code>${escapeHtml(source)}</code></pre>`
+      : markdownToHtml(source);
+    const formatLabel = doc.format === "yaml" ? "YAML 模板" : "Markdown 文档";
+    article.innerHTML = `<div class="document__meta"><span>${formatLabel}</span><a href="${encodeURI(doc.path)}" download>下载原文件</a></div>${rendered}`;
     document.title = `${doc.title} · Codex 多 Chat 治理模板`;
     if (updateHistory) {
       const url = new URL(window.location.href);
